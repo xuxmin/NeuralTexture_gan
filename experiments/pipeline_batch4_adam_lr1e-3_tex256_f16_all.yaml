@@ -1,0 +1,17 @@
+PRINT_FREQ: 5
+TRAIN:
+  LR: 0.001
+  END_EPOCH: 200
+  BATCH_SIZE: 4
+  LR_STEP: [60]
+  LR_FACTOR: 0.1
+  PROCESS: True
+NEURAL_TEXTURE:
+  FEATURE_NUM: 16
+  HIERARCHY: False
+MODEL:
+  NAME: pipeline
+  IMAGE_SIZE: [256, 256]
+DATASET:
+  MODE: ALL
+  ROOT: D:\Code\Project\NeuralTexture_gan\data

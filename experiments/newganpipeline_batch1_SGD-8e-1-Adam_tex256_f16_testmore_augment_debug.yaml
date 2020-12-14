@@ -1,0 +1,21 @@
+PRINT_FREQ: 5
+TRAIN:
+  D_LR: 0.0001
+  G_LR: 0.0005  
+  END_EPOCH: 150
+  BATCH_SIZE: 1
+  LR_STEP: [80]
+  LR_FACTOR: 0.1
+  PROCESS: False
+NEURAL_TEXTURE:
+  FEATURE_NUM: 16
+  HIERARCHY: False
+MODEL:
+  NAME: newganpipeline
+  IMAGE_SIZE: [256, 256]
+DATASET:
+  MODE: ALL_DATA_7/8
+  ROOT: D:\Code\Project\NeuralTexture_gan\data
+  AUGMENT: True
+DEBUG:
+  CHECK_PER_EPOCH: 3
