@@ -5,7 +5,7 @@ configs = {
 
     'NEURAL_TEXTURE': {
         'SIZE': 256,
-        'FEATURE_NUM': 12,
+        'FEATURE_NUM': 16,
         'HIERARCHY': False,                         
     },
 

@@ -12,6 +12,7 @@ from core.utils.imutils import im_to_numpy
 from core.utils.imutils import CEToneMapping
 from core.models.pipeline import PipelineModel
 from core.models.pipeline import NewGanPipelineModel
+from core.models.lp_generator import LPGenerator
 import torch
 import torch.nn.functional as F
 
@@ -43,6 +44,10 @@ def get_model(checkpoint_path, file_name='model_best.pth.tar'):
         model = NewGanPipelineModel(256, 256, 16, device).to(device)
         model = load_gan_model(model, resume_file)
         model.eval()
+    elif 'LPpipeline' in resume_file:
+        model = LPGenerator(256, 256, 16, device).to(device)
+        model = load_gan_model(model, resume_file)
+        model.eval()
     else:
         model = PipelineModel(256, 256, 16, device).to(device)
         model = load_model(model, resume_file)
@@ -50,7 +55,7 @@ def get_model(checkpoint_path, file_name='model_best.pth.tar'):
     return model
 
 
-def valid_model(model, uv_map, normal, view_dir, light_pos):
+def valid_model(model, uv_map, normal, view_dir, light_pos, is_lp=False):
     device = 'cuda'
     uv_map = uv_map.unsqueeze(0).to(device)
     normal = normal.unsqueeze(0).to(device)
@@ -61,7 +66,10 @@ def valid_model(model, uv_map, normal, view_dir, light_pos):
         light_pos = light_pos.unsqueeze(0).to(device)
 
     # eval a data
-    _, output = model(uv_map, normal, view_dir, light_pos)
+    if is_lp:
+        _, output = model.generate(uv_map, normal, view_dir, light_pos)
+    else:
+        _, output = model(uv_map, normal, view_dir, light_pos)
 
     return output[0]
 
@@ -123,16 +131,20 @@ def gen_video(name, model1, model2):
         configs.DATASET.DLV = False
         output1 = valid_model(model1, uv_map, normal, view_dir1, light_dir)
 
-        light_dir_map = eggDataset_valid.getLightDirMap(7, 282, light_position)
+        output2 = valid_model(model2, uv_map, normal, view_dir1, light_dir, is_lp=True)
 
-        sample = uv_map.permute(1, 2, 0)[:, :, :2].unsqueeze(0)            # 1 × H × W × 2
-        sample = 2 * sample - 1
-        sample[:, :, :, 1] = -sample[:, :, :, 1]
 
-        light_dir = sample_texture(light_dir_map, sample)
 
-        configs.DATASET.DLV = True
-        output2 = valid_model(model2, uv_map, normal, view_dir2, light_dir)
+        # light_dir_map = eggDataset_valid.getLightDirMap(7, 282, light_position)
+
+        # sample = uv_map.permute(1, 2, 0)[:, :, :2].unsqueeze(0)            # 1 × H × W × 2
+        # sample = 2 * sample - 1
+        # sample[:, :, :, 1] = -sample[:, :, :, 1]
+
+        # light_dir = sample_texture(light_dir_map, sample)
+
+        # configs.DATASET.DLV = True
+        # output2 = valid_model(model2, uv_map, normal, view_dir2, light_dir)
         # output3 = valid_model(model3, uv_map, normal, view_dir, light_dir)
 
         image1 = torch.exp(output1.detach().cpu() * 3) - math.exp(-3)         # image [0, ∞]
@@ -197,9 +209,11 @@ checkpoint_alldata_l1 =  "D:\\Code\\Project\\NeuralTexture_gan\\log\\egg\\newgan
 # dlv
 checkpoint_dlv =  "D:\\Code\\Project\\NeuralTexture_gan\\log\\egg\\newganpipeline\\newganpipeline_batch1_SGD-8e-1-Adam_tex256_f16_alldata_augment_debug_dlv"
 
+# lighting pattern
+checkpoint_lp = "D:\\Code\\Project\\NeuralTexture_gan\\log\\egg\\LPpipeline\\LPpipeline_batch1_SGD-Adam_tex256_f16_oneview"
 
 model1 = get_model(checkpoint_alldata, 'checkpoint_epoch10.pth.tar')
-model2 = get_model(checkpoint_dlv, 'checkpoint.pth.tar')
+model2 = get_model(checkpoint_lp, 'checkpoint.pth.tar')
 # model3 = get_model(checkpoint_alldata, 'checkpoint_epoch9.pth.tar')
 
 

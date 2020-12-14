@@ -64,7 +64,7 @@ class LPGenerator(nn.Module):
 
         pred = torch.sum(pred, 0, keepdim=True)                 # 3 × H × W
 
-        # pred = torch.log(math.exp(-3) + pred) / 3             # pred range [-∞, +∞]
+        pred = torch.log(math.exp(-3) + pred) / 3               # pred range [-∞, +∞]
 
         return pred
 

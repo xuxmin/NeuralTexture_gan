@@ -205,7 +205,7 @@ def main():
 
             for i, (lighting_pattern, gt, masks) in enumerate(lp_loader):
                 
-                # gt = torch.log(math.exp(-3)+gt) / 3
+                gt = torch.log(math.exp(-3)+gt) / 3
 
                 lighting_pattern = lighting_pattern.float().to(device)
                 gt = gt.to(device)
@@ -264,14 +264,14 @@ def main():
                     logger.info('[%d][%d/%d] Loss_D: %.4f(%.4f) Loss_G: %.4f(%.4f) Loss_L1: %.4f(%.4f) Loss_FM: %.4f(%.4f) Loss_VGG: %.4f(%.4f)'
                                 % (epoch, i, len(lp_loader), errD.item(), loss_errD.avg, errGAN.item(), loss_errGAN.avg, errL1.item(), loss_errL1.avg, errFM.item(), loss_errFM.avg, errVGG.item(), loss_errVGG.avg))
                     
-                    # imgA = torch.exp(fake_img[0].detach().cpu() * 3) - math.exp(-3)
-                    # imgB = torch.exp(real_img[0].detach().cpu() * 3) - math.exp(-3)
-                    imgA = fake_img[0].detach().cpu()
-                    imgB = real_img[0].detach().cpu()
+                    imgA = torch.exp(fake_img[0].detach().cpu() * 3) - math.exp(-3)
+                    imgB = torch.exp(real_img[0].detach().cpu() * 3) - math.exp(-3)
+                    # imgA = fake_img[0].detach().cpu()
+                    # imgB = real_img[0].detach().cpu()
 
                     save_tensor_image(imgA, "output/pred.png")
                     save_tensor_image(imgB, "output/gt.png")
-            
+
                     writer = writer_dict['writer']
                     global_steps = writer_dict['train_global_steps']
                     writer.add_scalar('loss_errD', errD.item(), global_steps)
