@@ -1,3 +1,7 @@
+"""
+NeuralTexture 原论文方法训练
+"""
+
 import argparse
 import pprint
 
@@ -41,14 +45,6 @@ def parse_args():
     args = parser.parse_args()
 
     return args
-
-
-def freeze_params(model):
-    """固定前三层参数
-    """
-    for name, value in model.named_parameters():
-        if name in ["texture.textures.0.layer1", "texture.textures.1.layer1", "texture.textures.2.layer1"]:
-            value.requires_grad = False
 
 
 def main():

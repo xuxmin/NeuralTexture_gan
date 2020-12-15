@@ -31,7 +31,7 @@ class NewGanPipelineModel(nn.Module):
             self.generator = Generator(generator_channel, 3, 64)
         elif configs.MODEL.GENERATE == 'TransformerNet':
             self.generator = TransformerNet(generator_channel)
-        
+
         self.device = device
 
     def forward(self, uv_map, normal, view_dir, light_dir):

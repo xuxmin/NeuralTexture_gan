@@ -44,4 +44,11 @@ configs = {
     'DEBUG': {
         'CHECK_PER_EPOCH': 0
     }
+
+    'LIGHTING_PATTERN': {
+        'BEGIN_LP_NUM': 6,
+        'END_LP_NUM': 100,
+        'BEGIN_EPOCH': 0,
+        'END_EPOCH': 50,
+    }
 }
