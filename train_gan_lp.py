@@ -39,7 +39,7 @@ Version 2
 - 初始lighting pattern 设置为 36 个, 梯度按正负拆分来获取 lighting pattern
 """
 
-cfg = "experiments/LPpipeline_batch1_SGD-Adam_tex256_f16_oneview_version2.yaml"
+cfg = "experiments/LPpipeline_batch1_SGD-Adam_tex256_f16_oneview_test.yaml"
 
 
 def weights_init(m):

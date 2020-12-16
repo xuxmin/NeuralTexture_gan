@@ -147,8 +147,16 @@ class LightingPatternPool(Dataset):
         VIEW = '0'
 
         logger.info("gradient: {}".format(lp))
-        
         lp = lp[0].to('cpu')
+
+        # 正交化
+        num = len(self.train_data)              # lighting pattern 的数目
+        for i in range(num):
+            path = self.train_data[i]
+            lp_i = torch.load("{}_lp.pt".format(path))
+            lp_i = lp_i / math.sqrt(torch.sum(lp_i * lp_i))     # normilize
+            lp = lp - torch.sum(lp * lp_i) * lp_i
+        
         lp_plus = lp.clone()
         lp_minus = lp.clone()
 
@@ -177,8 +185,9 @@ class LightingPatternPool(Dataset):
             image = to_torch(np.load(image_path))
             gt_plus = gt_plus + image * lp_plus[j]
             gt_minus = gt_minus + image * lp_minus[j]
-
-        num = len(self.train_data)
+        
+        if not exists(join(self.checkpoint_dir, VIEW)):
+            mkdir_p(join(self.checkpoint_dir, VIEW))
 
         lp_plus_path = join(self.checkpoint_dir, VIEW, "{}_lp.pt".format(num))
         gt_plus_path = join(self.checkpoint_dir, VIEW, "{}_gt.pt".format(num))
