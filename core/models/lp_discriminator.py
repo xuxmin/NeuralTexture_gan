@@ -47,24 +47,9 @@ class LPDiscriminator(nn.Module):
 
         ipt = torch.cat((x, out_lp), 1)
 
-        # print("ipt")
-        # print (ipt)
-
         out1 = self.layer1(ipt)
-
-        # print("out1")
-        # print (out1)
-
         out2 = self.layer2(out1)
-
-        # print("out2")
-        # print (out2)
-
         out3 = self.layer3(out2)
-
-        # print("out3")
-        # print (out3)
-
         out4 = self.layer4(out3)
         out5 = self.layer5(out4)
 

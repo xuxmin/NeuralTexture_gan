@@ -43,12 +43,12 @@ configs = {
 
     'DEBUG': {
         'CHECK_PER_EPOCH': 0
-    }
+    },
 
     'LIGHTING_PATTERN': {
-        'BEGIN_LP_NUM': 6,
+        'BEGIN_LP_NUM': 36,         # 当前训练的 lighting pattern 数目
         'END_LP_NUM': 100,
-        'BEGIN_EPOCH': 0,
+        'BEGIN_EPOCH': 0,           # 当前 lighting pattern 数目下, 已经训练的 epoch 数目
         'END_EPOCH': 50,
     }
 }

@@ -2,7 +2,7 @@ import torch.nn as nn
 
 
 class Discriminator(nn.Module):
-    def __init__(self,input_nc,output_nc,ndf):
+    def __init__(self, input_nc, output_nc, ndf):
         super(Discriminator,self).__init__()
         # 256 x 256
         self.layer1 = nn.Sequential(nn.Conv2d(input_nc+output_nc,ndf,kernel_size=4,stride=2,padding=1),

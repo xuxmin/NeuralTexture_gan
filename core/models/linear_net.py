@@ -4,6 +4,9 @@ import torch.nn as nn
 
 class LinearNet(nn.Module):
     def __init__(self, in_dim, out_dim):
+        self.in_dim = in_dim
+        self.out_dim = out_dim
+
         super(LinearNet, self).__init__()
         self.layer1 = nn.Sequential(
             nn.Linear(in_dim, 512),

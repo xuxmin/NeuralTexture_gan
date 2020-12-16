@@ -161,7 +161,7 @@ def imshow(img, tone_mapping=True):
     fig=plt.figure()
     tmp = img
     if tone_mapping:
-        tmp = CEToneMapping(tmp, 3)
+        tmp = CEToneMapping(tmp, 0.2)
     npimg = im_to_numpy(tmp * 255).astype(np.uint8)
     plt.imshow(npimg)
     plt.axis('off')
@@ -174,7 +174,7 @@ def show_img_list(img_list, size, rol_col, tone_mapping=True, title_list = None)
     for i in range(1, num+1):
         tmp = img_list[i-1]
         if tone_mapping:
-            tmp = CEToneMapping(tmp, 3)
+            tmp = CEToneMapping(tmp, 0.2)
         npimg = im_to_numpy(tmp * 255).astype(np.uint8)
         fig.add_subplot(rol_col[0], rol_col[1], i)
         if title_list:
@@ -192,7 +192,7 @@ def imwrite(filename, img, tone_mapping=True):
     - img: tensor C × H × W, range [0, 1], or ndarray H × W × C
     """
     if tone_mapping:
-        tone_img = CEToneMapping(img, 3)
+        tone_img = CEToneMapping(img, 0.2)
     else:
         tone_img = img
     npimg = im_to_numpy(tone_img * 255).astype(np.uint8)
