@@ -188,7 +188,7 @@ def main():
         logger.info("=> create new checkpoint at '{}'".format(resume_file))
 
     # create dataLoader
-    lp_pool = LightingPatternPool(root=configs.DATASET.ROOT, lp_num=configs.LIGHTING_PATTERN.BEGIN_LP_NUM)
+    lp_pool = LightingPatternPool(root=configs.DATASET.ROOT, lp_num=configs.LIGHTING_PATTERN.BEGIN_LP_NUM, checkpoint_dir=checkpoint_dir)
     lp_loader = torch.utils.data.DataLoader(
         lp_pool,
         batch_size=1,
