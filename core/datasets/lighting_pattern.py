@@ -14,6 +14,7 @@ from core.utils.osutils import isfile
 from core.utils.osutils import join
 from core.utils.osutils import exists
 from core.utils.osutils import mkdir_p
+from core.utils.misc import normalize
 
 logger = logging.getLogger(__name__)
 
@@ -98,14 +99,19 @@ class LightingPatternPool(Dataset):
     def __len__(self):
         return len(self.train_data)
 
-    def get(self):
+    def get(self, index=None):
         """
+        如果不提供 index, 则以 weight 为概率随机获取, 否则按照 index 下标获取
+
         获取一个数据用于训练
         lighting_pattern: (384, )
         gt: (3, H, W)
         """
         # 根据 weight 随机选取数据
-        path = random.choices(self.train_data, self.weight)[0]
+        if not index:
+            path = random.choices(self.train_data, self.weight)[0]
+        eles:
+            path = self.train_data[index]
 
         folder_idx, image_idx = self._parse_path(path)              # folder_idx 表示不同的 view, image_idx 对应 lighting pattern
         mask_path =  self.root + "\\gt\\{}\\mask_cam00.png".format(folder_idx)
@@ -121,7 +127,7 @@ class LightingPatternPool(Dataset):
 
         # load lighting pattern
         lighting_pattern = torch.load("{}_lp.pt".format(path))
-        lighting_pattern = lighting_pattern / math.sqrt(torch.sum(lighting_pattern * lighting_pattern)) # normilize
+        lighting_pattern = normalize(lighting_pattern)
 
         # load gt
         gt = torch.load("{}_gt.pt".format(path))
@@ -149,13 +155,14 @@ class LightingPatternPool(Dataset):
         logger.info("gradient: {}".format(lp))
         lp = lp[0].to('cpu')
 
-        # 正交化
         num = len(self.train_data)              # lighting pattern 的数目
-        for i in range(num):
-            path = self.train_data[i]
-            lp_i = torch.load("{}_lp.pt".format(path))
-            lp_i = lp_i / math.sqrt(torch.sum(lp_i * lp_i))     # normilize
-            lp = lp - torch.sum(lp * lp_i) * lp_i
+
+        # 正交化
+        # for i in range(num):
+        #     path = self.train_data[i]
+        #     lp_i = torch.load("{}_lp.pt".format(path))
+        #     lp_i = lp_i / math.sqrt(torch.sum(lp_i * lp_i))     # normilize
+        #     lp = lp - torch.sum(lp * lp_i) * lp_i
         
         lp_plus = lp.clone()
         lp_minus = lp.clone()
@@ -167,10 +174,10 @@ class LightingPatternPool(Dataset):
 
         # normalize
         if torch.sum(lp_plus * lp_plus) != 0:
-            lp_plus = lp_plus / math.sqrt(torch.sum(lp_plus * lp_plus))
+            lp_plus = normalize(lp_plus)
 
         if torch.sum(lp_minus * lp_minus) != 0:
-            lp_minus = lp_minus / math.sqrt(torch.sum(lp_minus * lp_minus))
+            lp_minus = normalize(lp_minus)
         
         if torch.sum(lp_plus * lp_plus) < 1e-6:
             lp_plus = lp_minus

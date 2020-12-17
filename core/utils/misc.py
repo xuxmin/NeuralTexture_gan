@@ -1,4 +1,4 @@
-
+import math
 import os
 import shutil
 import time
@@ -8,6 +8,10 @@ from pathlib import Path
 from core.utils.osutils import join
 from core.config import configs
 
+
+def normalize(v):
+    v = v / math.sqrt(torch.sum(v * v))
+    return v
 
 def to_numpy(tensor):
     if torch.is_tensor(tensor):

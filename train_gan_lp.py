@@ -6,6 +6,7 @@ import cv2
 import math
 import imageio
 import numpy as np
+import random
 from torch.autograd import Variable
 from tensorboardX import SummaryWriter
 import torch.nn.functional as F
@@ -29,17 +30,22 @@ from core.utils.imutils import show_img_list
 from core.utils.imutils import CEToneMapping
 from core.utils.imutils import im_to_numpy
 from core.utils.evaluation import AverageMeter
+from core.utils.camutils import load_bin
 
 """
 Version 2
-
 - 生成器与判别器共享 lighting pattern 的线性变换层
 - 生成新的 lighting pattern 方法: lighting pattern 梯度的权重和
 - 增加 LIGHTING_PATTERN 配置
 - 初始lighting pattern 设置为 36 个, 梯度按正负拆分来获取 lighting pattern
+
+Version 3
+- gradient 的计算, 只通过判别 G(x) 的损失来生成
+- 增加一个软约束: min |G(li + Δl) - (G(li) + G(Δl))|, alpha 来保证线性性
+- 暂时不用 SVD
 """
 
-cfg = "experiments/LPpipeline_batch1_SGD-Adam_tex256_f16_oneview_test.yaml"
+cfg = "experiments/LPpipeline_batch1_SGD-Adam_tex256_f16_oneview_version3.yaml"
 
 
 def weights_init(m):
@@ -79,8 +85,6 @@ def genLightingPattern(netD, netG, lp_loader, lp_pool, val_dataset, device):
     view_dir = view_dir.unsqueeze(0).to(device)
 
     for i, (lighting_pattern, gt, mask) in enumerate(lp_loader):
-        
-        gt = torch.log(math.exp(-3)+gt) / 3         # about range [-1, 1]
 
         lighting_pattern = lighting_pattern.float().to(device)
         gt = gt.to(device)
@@ -92,23 +96,15 @@ def genLightingPattern(netD, netG, lp_loader, lp_pool, val_dataset, device):
         lighting_pattern = torch.autograd.Variable(lighting_pattern, requires_grad=True)
 
         real_A, fake_B = netG(uv_map, normal, view_dir, lighting_pattern)
-        real_B = gt
-
-        real_AB = torch.cat((real_A, torch.autograd.Variable(real_B)), 1)
-        _, output = netD(real_AB)
-        errD_real = nn.BCELoss()(output, torch.ones(output.size()).to(device))
 
         fake_AB = torch.cat((real_A, torch.autograd.Variable(fake_B)), 1)
         _, output = netD(fake_AB)
         errD_fake = nn.BCELoss()(output, torch.zeros(output.size()).to(device))
 
-        errD = (errD_fake + errD_real) / 2
-        errD.backward()
+        errD_fake.backward()
 
         # 梯度与对应的 weight 相乘
         total_grad += lighting_pattern.grad * lp_pool.weight[i]
-
-    # total_grad /= len(lp_loader)
 
     lp_pool.add(total_grad.to(device))
 
@@ -219,6 +215,7 @@ def main():
             loss_errL1 = AverageMeter()
             loss_errFM = AverageMeter()
             loss_errVGG = AverageMeter()
+            loss_errCB = AverageMeter()
 
             # uv_map, normal, view_dir 应该都是一样的, 现在只用一个 view 来训练
             uv_map, _, _, normal, _, view_dir = val_dataset.getData(0, 0)
@@ -275,7 +272,32 @@ def main():
                 for j in range(len(real_features_VGG)):
                     errVGG += weights[j] * criterionL1(fake_features_VGG[j], real_features_VGG[j])
 
-                errG = errGAN + 10 * errL1 + 10 * errFM + 10 * errVGG
+                # linear combine loss
+                # 先随机再选取一个 lighting pattern
+                another_lp, another_gt, _ = lp_pool.get()
+                another_lp = another_lp.unsqueeze(0).float().to(device)
+                another_gt = another_gt.unsqueeze(0).to(device)
+                # 生成该 lighting pattern 下的图片
+                _, another_fake_B = netG(uv_map, normal, view_dir, another_lp)
+
+                # 线性组合出一个新的 lighting pattern
+                alpha = random.random()
+                combine_lp = alpha * lighting_pattern + (1 - alpha) * another_lp
+                # 新的 lighting pattern 进行 normalize
+                length = math.sqrt(torch.sum(combine_lp * combine_lp))
+                combine_lp = combine_lp / length
+                # 根据组合的 lighting pattern 生成图片
+                _, combine_fake_B = netG(uv_map, normal, view_dir, combine_lp)
+
+                # 将生成的图片变换回到线性空间
+                origin_combine_fake_B = torch.exp(combine_fake_B * 3) - math.exp(-3)
+                origin_another_fake_B = torch.exp(another_fake_B * 3) - math.exp(-3)
+                origin_fake_B = torch.exp(fake_B * 3) - math.exp(-3)
+
+                # 计算线性组合的损失
+                errCB = criterionL1(origin_combine_fake_B * length, alpha * origin_fake_B + (1 - alpha) * origin_another_fake_B)
+
+                errG = errGAN + 10 * errL1 + 10 * errFM + 10 * errVGG + 10 * errCB
                 errG.backward()
                 optimizerG.step()
 
@@ -284,10 +306,12 @@ def main():
                 loss_errL1.update(errL1.item(), lighting_pattern.size(0))
                 loss_errFM.update(errFM.item(), lighting_pattern.size(0))
                 loss_errVGG.update(errVGG.item(), lighting_pattern.size(0))
+                loss_errCB.update(errCB.item(), lighting_pattern.size(0))
 
                 if i % 10 == 0:
-                    logger.info('[LP %d][EPOCH %d][%d/%d] Loss_D: %.4f(%.4f) Loss_G: %.4f(%.4f) Loss_L1: %.4f(%.4f) Loss_FM: %.4f(%.4f) Loss_VGG: %.4f(%.4f)'
-                                % (LP_NUM, epoch, i, len(lp_loader), errD.item(), loss_errD.avg, errGAN.item(), loss_errGAN.avg, errL1.item(), loss_errL1.avg, errFM.item(), loss_errFM.avg, errVGG.item(), loss_errVGG.avg))
+                    logger.info('[LP %d][EPOCH %d][%d/%d] Loss_D: %.4f(%.4f) Loss_G: %.4f(%.4f) Loss_L1: %.4f(%.4f) Loss_FM: %.4f(%.4f) Loss_VGG: %.4f(%.4f) Loss_CB: %.4f(%.4f)'
+                                % (LP_NUM, epoch, i, len(lp_loader), errD.item(), loss_errD.avg, errGAN.item(), loss_errGAN.avg, \
+                                errL1.item(), loss_errL1.avg, errFM.item(), loss_errFM.avg, errVGG.item(), loss_errVGG.avg, errCB.item(), loss_errCB.avg))
                     
                     imgA = torch.exp(fake_B[0].detach().cpu() * 3) - math.exp(-3)
                     imgB = torch.exp(real_B[0].detach().cpu() * 3) - math.exp(-3)
@@ -301,6 +325,7 @@ def main():
                     writer.add_scalar('loss_errL1', errL1.item(), global_steps)
                     writer.add_scalar('loss_errFM', errFM.item(), global_steps)
                     writer.add_scalar('loss_errVGG', errVGG.item(), global_steps)
+                    writer.add_scalar('loss_errCB', errCB.item(), global_steps)
                     writer_dict['train_global_steps'] = global_steps + 1
 
                 if configs.DEBUG.CHECK_PER_EPOCH != 0:
@@ -368,7 +393,7 @@ def main():
             min_loss = 10000
                     
             # remember best acc and save checkpoint
-            if epoch % 1 == 0:
+            if epoch % 20 == 0:
                 logger.info('=> saving checkpoint to {}'.format(checkpoint_dir))
                 save_checkpoint({
                     'epoch': epoch + 1,
@@ -384,7 +409,14 @@ def main():
 
         logger.info("generate lighting pattern...")
 
-        genLightingPattern(netD, netG, lp_loader, lp_pool, val_dataset, device)
+        if configs.LIGHTING_PATTERN.GENERATE == 'gradient':
+            genLightingPattern(netD, netG, lp_loader, lp_pool, val_dataset, device)
+        elif configs.LIGHTING_PATTERN.GENERATE == 'random':
+            data_file = "D:\\Code\\Project\\NeuralTexture_gan\\data\\random_projection_W(36, 384).bin"
+            lighting_pattern = load_bin(data_file, (36, 384))
+            lp = torch.from_numpy(lighting_pattern[LP_NUM // 2]).to(device)
+            lp_pool.add(lp)
+
 
         logger.info('=> saving checkpoint to {}'.format(checkpoint_dir))
         save_checkpoint({

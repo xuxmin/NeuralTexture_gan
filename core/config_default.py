@@ -46,6 +46,7 @@ configs = {
     },
 
     'LIGHTING_PATTERN': {
+        'GENERATE': 'gradient',     # 生成新的 lighting pattern 方式: GRADIENT/ RANDOM
         'INITIAL_NUM': 36,          # 初始的 lighting pattern 数目
         'BEGIN_LP_NUM': 36,         # 当前训练的 lighting pattern 数目
         'END_LP_NUM': 100,
