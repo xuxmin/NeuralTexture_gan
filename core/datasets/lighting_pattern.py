@@ -110,7 +110,7 @@ class LightingPatternPool(Dataset):
         # 根据 weight 随机选取数据
         if not index:
             path = random.choices(self.train_data, self.weight)[0]
-        eles:
+        else:
             path = self.train_data[index]
 
         folder_idx, image_idx = self._parse_path(path)              # folder_idx 表示不同的 view, image_idx 对应 lighting pattern
