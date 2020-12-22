@@ -111,7 +111,7 @@ class EggDataset(Dataset):
                     elif folder == 1 and p % 2 == 1:                # 随便取一点作为验证集
                         self.valid_data.append("{}\\gt\\{}\\img{:0>5d}_cam00.exr".format(self.root, folder, p))
         elif mode == 'ONE_VIEW':
-            for p in range(64):
+            for p in range(384):
                 self.train_data.append("{}\\gt\\{}\\img{:0>5d}_cam00.exr".format(self.root, 0, p))
                 self.valid_data.append("{}\\gt\\{}\\img{:0>5d}_cam00.exr".format(self.root, 0, p))
         elif mode == 'TEST_6':
