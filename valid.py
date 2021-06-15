@@ -4,7 +4,7 @@ import torch.nn.parallel
 import torch.backends.cudnn as cudnn
 import math
 from torch.autograd import Variable
-from tensorboardX import SummaryWriter
+from torch.utils.tensorboard import SummaryWriter
 
 from core.models.pipeline import NewGanPipelineModel
 from core.datasets.egg import EggDataset
@@ -19,19 +19,13 @@ from core.utils.imutils import CEToneMapping
 from core.utils.evaluation import AverageMeter
 from core.utils.evaluation import accuracy
 
-# 新方法尝试解决光照问题
-# cfg = "experiments/newganpipeline_batch1_SGDAdam_lr1e-3_tex256_f16_testmore_loss1-10-10-10.yaml"
-cfg = "experiments/newganpipeline_batch1_SGD-8e-1-Adam_lr1e-3_tex256_f16_testmore_loss1-10-10-10.yaml"
-# cfg = "experiments/newganpipeline_batch1_SGD-8e-1-Adam_lr1e-3_tex256_f16_testmore_loss1-10-10-10_augment.yaml"
-# cfg = "experiments/newganpipeline_batch1_SGD-8e-1-Adam_lr1e-3_tex256_f16_alldata_loss1-10-10-10.yaml"
+# cfg = "experiments/final/newganpipeline_tex256_f16_alldata_loss1-10-10-10.yaml"
+# cfg = "experiments/final/newganpipeline_tex256_f16_alldata_loss0-1-0-0.yaml"
+cfg = "experiments/final/newganpipeline_tex256_f16_alldata_loss1-1-0-0.yaml"
 
-cfg = "experiments/newganpipeline_batch1_SGD-8e-1-Adam_tex256_f16_testmore_augment_debug.yaml"
-cfg = "experiments/newganpipeline_batch1_SGD-8e-1-Adam_tex256_f16_alldata_augment_debug.yaml"
+cfg = "experiments/final/newganpipeline_tex256_f16_data5-8_loss1-10-10-10.yaml"
 
 
-
-# cfg = "experiments/newganpipeline_batch1_SGD-8e-1-Adam_tex256_f16_testmore_augment_debug_concate.yaml"
-cfg = "experiments/newganpipeline_batch1_Adam_lr1e-3_tex256_f16_testmore_loss-l1_augment_debug.yaml"
 
 
 def main():    
@@ -50,7 +44,7 @@ def main():
     netG = NewGanPipelineModel(configs.MODEL.IMAGE_SIZE[0], configs.MODEL.IMAGE_SIZE[1], configs.NEURAL_TEXTURE.FEATURE_NUM, device).to(device)
 
     # resume model from a checkpoint
-    resume_file = join(checkpoint_dir, 'checkpoint_epoch60.pth.tar')
+    resume_file = join(checkpoint_dir, 'checkpoint.pth.tar')
     # resume_file = join(checkpoint_dir, 'model_best.pth.tar')
     if isfile(resume_file):
         logger.info("=> loading checkpoint '{}'".format(resume_file))
@@ -85,6 +79,7 @@ def main():
 
     MSE_acc = AverageMeter()
     MAE_acc = AverageMeter()
+    SSIM_acc = AverageMeter()
 
     with torch.no_grad():
 
@@ -103,12 +98,13 @@ def main():
             real_A, fake_B = netG(uv_map, normal, view_dir, light_pos)
             real_B = gt
 
-            MAE, MSE = accuracy(fake_B, real_B, masks)
+            MAE, MSE, SSIM = accuracy(fake_B, real_B, masks)
 
             MAE_acc.update(MAE.item(), uv_map.size(0))
             MSE_acc.update(MSE.item(), uv_map.size(0))
+            SSIM_acc.update(SSIM, uv_map.size(0))
 
             if i % 30 == 0 or i == len(val_loader) - 1:
-                logger.info('[%d/%d] MAE: %.4f MSE: %.4f' % (i, len(val_loader), MAE_acc.avg, MSE_acc.avg))
+                logger.info('[%d/%d] MAE: %.4f MSE: %.4f SSIM: %.4f' % (i, len(val_loader), MAE_acc.avg, MSE_acc.avg, SSIM_acc.avg))
 
 main()

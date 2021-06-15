@@ -5,6 +5,8 @@ import numpy as np
 import math
 from torch.utils.data import Dataset
 import torch.nn.functional as F
+import os
+import sys
 
 from core.utils.camutils import load_bin
 from core.utils.imutils import load_image
@@ -14,7 +16,9 @@ from core.utils.imutils import augment
 from core.utils.imutils import CEToneMapping
 from core.utils.imutils import to_torch
 from core.utils.imutils import im_to_torch
+from core.utils.imutils import im_to_numpy
 from core.utils.osutils import isfile
+from core.utils.ThresholdROI import ThresholdROI
 from core.config import configs
 
 logger = logging.getLogger(__name__)
@@ -22,8 +26,8 @@ logger = logging.getLogger(__name__)
 
 def sample_texture(texture, sample):
     """
-    texture: 1 × 1 × H × W
-    sample: 1 × H × W × 2
+    texture: 1 × 3 × H × W
+    sample: 1 × H × W × 2       range [-1, 1]
 
     Return: 3 × H × W
     """
@@ -33,6 +37,34 @@ def sample_texture(texture, sample):
     texture_B = F.grid_sample(texture[:, 2:3, :, :], sample, align_corners=True)
     result = torch.cat(tuple([texture_R, texture_G, texture_B]), dim=1)
     return result[0]
+
+
+def get_uv_map(camera_pos):
+    """
+    camera_pos: (3, )
+    """
+
+    oldval = os.getcwd()                                    # 查看当前工作目录
+    os.chdir('D:\\Code\\Project\\temp\\PathTracer\\PathTracer')   # 修改当前工作目录
+
+    x = camera_pos[0]
+    y = camera_pos[1]
+    z = camera_pos[2]
+
+    file_name = "render-{}-{}-{}".format(x, y, z)
+    file_path = "res\\{}.exr".format(file_name)
+
+    if not isfile(file_path):
+        os.system('.\\PathTracer.exe obj\\test\meshed-poisson_obj_result.obj uv {} {} {} {}'.format(x, y, z, file_name))
+
+    img = load_image(file_path)
+
+    os.chdir(oldval)
+
+    if img is None:
+        print("error get_uv_map")
+
+    return img
 
 
 class EggDataset(Dataset):
@@ -46,7 +78,15 @@ class EggDataset(Dataset):
         self.valid_data = []
         self.light_data = load_bin("{}\\lights_8x8.bin".format(root), (2, 384, 3))  # pos, norm
 
-        self.normal_map = load_image("{}\\normal_geo_gloabl.exr".format(root))
+        path = "{}\\normal_geo_gloabl.pt".format(root)
+
+        if isfile(path):
+            self.normal_map = torch.load(path)
+        else:
+            self.normal_map = load_image("{}\\normal_geo_gloabl.exr".format(root))
+            torch.save(self.normal_map, path)
+
+        # self.normal_map = load_image("{}\\normal_geo_gloabl.exr".format(root))
 
         self._split_dataset(configs.DATASET.MODE)
 
@@ -81,7 +121,7 @@ class EggDataset(Dataset):
                 for p in range(384):
                     if p == 0 and folder % 8 == 0:
                         self.valid_data.append("{}\\gt\\{}\\img{:0>5d}_cam00.exr".format(self.root, folder, p))
-                    elif p == 0:
+                    if p == 0:
                         self.train_data.append("{}\\gt\\{}\\img{:0>5d}_cam00.exr".format(self.root, folder, p))
         elif mode == "TEST_ALL":
             for folder in range(32):
@@ -108,12 +148,45 @@ class EggDataset(Dataset):
                 for p in range(384):
                     if folder % 8 != 1 and p % 8 != 1:              # 取 28 个方向, 每个方向 336 种光照, 一共 9408 张图像
                         self.train_data.append("{}\\gt\\{}\\img{:0>5d}_cam00.exr".format(self.root, folder, p))
-                    elif folder == 1 and p % 2 == 1:                # 随便取一点作为验证集
+                    # elif folder == 1 and p % 2 == 1:                # 随便取一点作为验证集
+                    else:
                         self.valid_data.append("{}\\gt\\{}\\img{:0>5d}_cam00.exr".format(self.root, folder, p))
+        elif mode == 'DATA_1/8':
+            for folder in range(32):
+                for p in range(384):
+                    if folder % 8 == 1 and p % 8 == 1:              # 取 4 个方向, 每个方向 48 种光照, 一共 192 张图像
+                        self.train_data.append("{}\\gt\\{}\\img{:0>5d}_cam00.exr".format(self.root, folder, p))
+                    elif folder % 8 != 1 and p % 8 != 1:
+                        pass
+                    else:              # 随便取一点作为验证集
+                        self.valid_data.append("{}\\gt\\{}\\img{:0>5d}_cam00.exr".format(self.root, folder, p))
+
+        elif mode == 'DATA_3/8':
+            for folder in range(32):
+                for p in range(384):
+                    if folder % 8 in [1, 3, 5] and p % 8 in [1, 3, 5]:              # 取 4 个方向, 每个方向 48 种光照, 一共 192 张图像
+                        self.train_data.append("{}\\gt\\{}\\img{:0>5d}_cam00.exr".format(self.root, folder, p))
+                    elif folder % 8 != 1 and p % 8 != 1:
+                        pass
+                    else:               # 随便取一点作为验证集
+                        self.valid_data.append("{}\\gt\\{}\\img{:0>5d}_cam00.exr".format(self.root, folder, p))
+
+        elif mode == 'DATA_5/8':
+            for folder in range(32):
+                for p in range(384):
+                    if folder % 8 in [0, 2, 4, 6, 7] and p % 8 in [0, 2, 4, 6, 7]:              # 取 4 个方向, 每个方向 48 种光照, 一共 192 张图像
+                        self.train_data.append("{}\\gt\\{}\\img{:0>5d}_cam00.exr".format(self.root, folder, p))
+                    elif folder % 8 != 1 and p % 8 != 1:
+                        pass
+                    else:             # 随便取一点作为验证集
+                        self.valid_data.append("{}\\gt\\{}\\img{:0>5d}_cam00.exr".format(self.root, folder, p))
+
         elif mode == 'ONE_VIEW':
             for p in range(384):
-                self.train_data.append("{}\\gt\\{}\\img{:0>5d}_cam00.exr".format(self.root, 0, p))
-                self.valid_data.append("{}\\gt\\{}\\img{:0>5d}_cam00.exr".format(self.root, 0, p))
+                if p % 12 != 0:
+                    self.train_data.append("{}\\gt\\{}\\img{:0>5d}_cam00.exr".format(self.root, 0, p))
+                else:
+                    self.valid_data.append("{}\\gt\\{}\\img{:0>5d}_cam00.exr".format(self.root, 0, p))
         elif mode == 'TEST_6':
             for p in [0, 10, 20, 30, 40, 50]:
                 self.train_data.append("{}\\gt\\{}\\img{:0>5d}_cam00.exr".format(self.root, 0, p))
@@ -138,6 +211,40 @@ class EggDataset(Dataset):
             return len(self.train_data)
         else:
             return len(self.valid_data)
+
+    def getData2(self, camera_pos):
+        uv_map = get_uv_map(camera_pos)
+
+        # 获取对应的 ROI
+        # roi = ThresholdROI(im_to_numpy(uv_map), thresh=0.0001)
+        # x, y, w, h = roi
+
+        x, y, w, h = 160, 320, 360, 360
+
+        # 根据 roi 裁剪出 uv_map
+        uv_map = uv_map[:, x:x+w, y:y+h]
+
+        size = w if w > h else h
+        # size = size + 50
+
+        # 填充边缘弄成一个正方形
+        np_uv_map = im_to_numpy(uv_map)
+        pad_w = (size - w) // 2
+        pad_h = (size - h) // 2
+
+        pad_img = cv2.copyMakeBorder(np_uv_map, pad_w, pad_w, pad_h, pad_h, cv2.BORDER_CONSTANT, value=(0, 0, 0))
+        pad_img = im_to_torch(pad_img)
+
+        # 缩放到目标大小
+        uv_map = resize(pad_img, configs.MODEL.IMAGE_SIZE[0], configs.MODEL.IMAGE_SIZE[1])
+
+        sample = uv_map.permute(1, 2, 0)[:, :, :2].unsqueeze(0)            # 1 × H × W × 2
+        sample = 2 * sample - 1
+        sample[:, :, :, 1] = -sample[:, :, :, 1]
+
+        normal = sample_texture((self.normal_map - 0.5)*2, sample)
+
+        return uv_map, normal
 
     def getData(self, folder_idx, image_idx):
 
@@ -289,8 +396,16 @@ class EggDataset(Dataset):
         uv_map_path =  self.root + "\\gt\\{}\\result1024\\render_extrinsic.yml.exr".format(folder_idx)
         mask_path =  self.root + "\\gt\\{}\\mask_cam00.png".format(folder_idx)
 
+
+        uv_map_pt_path = self.root + "\\gt\\{}\\result1024\\render_extrinsic.yml.pt".format(folder_idx)
+        if isfile(uv_map_pt_path):
+            uv_map = torch.load(uv_map_pt_path)
+        else:
+            uv_map = load_image(uv_map_path)        # C × H × W,  [0, 1]
+            torch.save(uv_map, uv_map_pt_path)
+        
         # load uv_map
-        uv_map = load_image(uv_map_path)        # C × H × W,  [0, 1]
+        # uv_map = load_image(uv_map_path)        # C × H × W,  [0, 1]
         uv_map = uv_map[:, 275:625, 325:675]
 
         # load mask

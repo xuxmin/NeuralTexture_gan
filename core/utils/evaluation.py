@@ -2,7 +2,9 @@
 import math
 import torch
 import skimage.feature
+from skimage.measure import compare_ssim
 
+from .imutils import im_to_numpy
 
 def accuracy(output, target, mask):
     '''
@@ -17,16 +19,22 @@ def accuracy(output, target, mask):
     criterionL1 = torch.nn.L1Loss(reduction='mean')
     criterionL2 = torch.nn.MSELoss(reduce = True)
 
-    masks = (mask == 1)
+    # masks = (mask == 1)
     # mask_output = torch.masked_select(output, masks)
     # mask_target = torch.masked_select(target, masks)
-    mask_output = output
-    mask_target = target
+    mask_output = output * mask
+    mask_target = target * mask
     MAE = criterionL1(mask_output, mask_target)             # 平均绝对距离
 
     MSE = criterionL2(mask_output, mask_target)
 
-    return MAE, MSE
+    tmp = torch.zeros(mask_output.size(0))
+    for i in range(mask_output.size(0)):
+        tmp[i] = compare_ssim(im_to_numpy(mask_output[i]), im_to_numpy(mask_target[i]), multichannel=True)
+
+    SSIM = torch.sum(tmp) / mask_output.size(0)
+
+    return MAE, MSE, SSIM
 
 
 class AverageMeter(object):

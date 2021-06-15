@@ -17,6 +17,8 @@ miscs/posetrack
 miscs/h36m
 !mean.pth.tar
 
+*.pdf
+
 __pycache__/
 *.py[cod]
 *$py.class

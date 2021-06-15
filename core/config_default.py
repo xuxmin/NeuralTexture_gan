@@ -35,6 +35,11 @@ configs = {
         'BEGIN_EPOCH': 0,
         'END_EPOCH': 1,
         'PROCESS': True,
+
+        'LAMBDA_GAN': 1,
+        'LAMBDA_L1': 10,
+        'LAMBDA_FM': 10,
+        'LAMBDA_VGG': 10,
     },
     
     'TEST': {

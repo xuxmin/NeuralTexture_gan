@@ -7,8 +7,9 @@ import math
 import imageio
 import numpy as np
 from torch.autograd import Variable
-from tensorboardX import SummaryWriter
+from torch.utils.tensorboard import SummaryWriter
 import torch.nn.functional as F
+import argparse
 
 from core.models.pipeline import NewGanPipelineModel
 from core.models.discriminator import Discriminator
@@ -29,40 +30,27 @@ from core.utils.imutils import CEToneMapping
 from core.utils.imutils import im_to_numpy
 from core.utils.evaluation import AverageMeter
 
-# 尝试
-# cfg = "experiments/newganpipeline_batch1_SGDAdam_lr1e-3_tex256_f16_testmore_loss1-10-10-10.yaml"
-
-# 尝试给 SGD 加一个动量, 加快一点训练速度, 结果差不多
-# cfg = "experiments/newganpipeline_batch1_SGD-8e-1-Adam_lr1e-3_tex256_f16_testmore_loss1-10-10-10.yaml"
-
-# 尝试使用 TransformerNet 生成器: 结果并没有比 UNet 好
-# cfg = 'experiments/newganpipeline_transformernet_batch1_SGDAdam_lr1e-3_tex256_f16_testmore_loss1-10-10-10.yaml'
-
-# 尝试增加 data augment
-# cfg = "experiments/newganpipeline_batch1_SGD-8e-1-Adam_tex256_f16_testmore_augment_debug.yaml"
-
-# 尝试使用所有的数据训练
-# cfg = "experiments/newganpipeline_batch1_SGD-8e-1-Adam_lr1e-3_tex256_f16_alldata_loss1-10-10-10.yaml"
-
-# 尝试用所有的数据训练, data augment
-# cfg = "experiments/newganpipeline_batch1_SGD-8e-1-Adam_tex256_f16_alldata_augment_debug.yaml"
-
-# 尝试使用 concatenate 的方法
-# cfg = "experiments/newganpipeline_batch1_SGD-8e-1-Adam_tex256_f16_testmore_augment_debug_concate.yaml"
-
-# 测试 Adam+Adam 训练, 三层图像输入判别器
-# cfg = "experiments/newganpipeline_batch1_AdamAdam_tex256_f16_testmore_augment_debug_test.yaml"
-
-# 尝试不更新判别器
-# cfg = "experiments/newganpipeline_batch1_SGD-8e-1-Adam_tex256_f16_testmore_augment_debug_test.yaml"
-
-# 尝试 different light/view dir
-# cfg = "experiments/newganpipeline_batch1_SGD-8e-1-Adam_tex256_f16_alldata_augment_debug_dlv.yaml"
-
-cfg = "experiments/newganpipeline_batch1_SGD-8e-1-Adam_tex256_f16_test6_augment_debug.yaml"
 
 
+def parse_args():
+    parser = argparse.ArgumentParser(description='Train keypoints network')
 
+    parser.add_argument('--cfg',
+                        help='experiment configure file name',
+                        required=True,
+                        type=str,
+                        )
+    args, _ = parser.parse_known_args()
+
+    update_config(args.cfg)
+
+    parser.add_argument('--frequent',
+                        help='frequency of logging',
+                        default=configs.PRINT_FREQ,
+                        type=int)
+    args = parser.parse_args()
+
+    return args
 
 def weights_init(m):
     classname = m.__class__.__name__
@@ -192,9 +180,12 @@ def debug_model(model, eggDataset, epoch, nth, checkpoint_dir, logger):
     model.train()
 
 
-def main():    
-    update_config(cfg)
-    logger, final_output_dir, tb_log_dir, checkpoint_dir = create_logger(cfg, 'train')
+def main():
+
+    args = parse_args()
+
+    # update_config(cfg)
+    logger, final_output_dir, tb_log_dir, checkpoint_dir = create_logger(args.cfg, 'train')
     # cudnn setting
     torch.backends.cudnn.benchmark = True
     torch.backends.cudnn.deterministic = False
@@ -357,7 +348,7 @@ def main():
             for j in range(len(real_features_VGG)):
                 errVGG += weights[j] * criterionL1(fake_features_VGG[j], real_features_VGG[j])
 
-            errG = errGAN + 10 * errL1 + 10 * errFM + 10 * errVGG
+            errG = configs.TRAIN.LAMBDA_GAN * errGAN + configs.TRAIN.LAMBDA_L1 * errL1 + configs.TRAIN.LAMBDA_FM * errFM + configs.TRAIN.LAMBDA_VGG * errVGG
 
             errG.backward()
             optimizerG.step()
@@ -388,9 +379,9 @@ def main():
 
             if configs.DEBUG.CHECK_PER_EPOCH != 0:
                 per_num = len(train_loader) // configs.DEBUG.CHECK_PER_EPOCH
-                if i % per_num == 0:
-                    # debug_model(netG, train_dataset, epoch, i // per_num, checkpoint_dir, logger)
-                    pass
+                # if i % per_num == 0:
+                #     # debug_model(netG, train_dataset, epoch, i // per_num, checkpoint_dir, logger)
+                #     pass
 
         # valid data
         netG.eval()
@@ -459,8 +450,19 @@ def main():
             # }, is_best, checkpoint=checkpoint_dir, filename=name)
         # else:
 
-        if epoch % 50 == 0:
+        if epoch in [5, 10]:
             save_checkpoint({
+                'epoch': epoch + 1,
+                'min_loss': min_loss,
+                'train_global_steps': writer_dict['train_global_steps'],
+                'valid_global_steps': writer_dict['valid_global_steps'],
+                'state_dict_G': netG.state_dict(),
+                'state_dict_D': netD.state_dict(),
+                'optimizer_G': optimizerG.state_dict(),
+                'optimizer_D': optimizerD.state_dict(),
+            }, is_best, checkpoint=checkpoint_dir, filename=name)
+
+        save_checkpoint({
                 'epoch': epoch + 1,
                 'min_loss': min_loss,
                 'train_global_steps': writer_dict['train_global_steps'],
@@ -474,3 +476,36 @@ def main():
     writer_dict['writer'].close()
 
 main()
+
+
+# 尝试
+# cfg = "experiments/newganpipeline_batch1_SGDAdam_lr1e-3_tex256_f16_testmore_loss1-10-10-10.yaml"
+
+# 尝试给 SGD 加一个动量, 加快一点训练速度, 结果差不多
+# cfg = "experiments/newganpipeline_batch1_SGD-8e-1-Adam_lr1e-3_tex256_f16_testmore_loss1-10-10-10.yaml"
+
+# 尝试使用 TransformerNet 生成器: 结果并没有比 UNet 好
+# cfg = 'experiments/newganpipeline_transformernet_batch1_SGDAdam_lr1e-3_tex256_f16_testmore_loss1-10-10-10.yaml'
+
+# 尝试增加 data augment
+# cfg = "experiments/newganpipeline_batch1_SGD-8e-1-Adam_tex256_f16_testmore_augment_debug.yaml"
+
+# 尝试使用所有的数据训练
+# cfg = "experiments/newganpipeline_batch1_SGD-8e-1-Adam_lr1e-3_tex256_f16_alldata_loss1-10-10-10.yaml"
+
+# 尝试用所有的数据训练, data augment
+# cfg = "experiments/newganpipeline_batch1_SGD-8e-1-Adam_tex256_f16_alldata_augment_debug.yaml"
+
+# 尝试使用 concatenate 的方法
+# cfg = "experiments/newganpipeline_batch1_SGD-8e-1-Adam_tex256_f16_testmore_augment_debug_concate.yaml"
+
+# 测试 Adam+Adam 训练, 三层图像输入判别器
+# cfg = "experiments/newganpipeline_batch1_AdamAdam_tex256_f16_testmore_augment_debug_test.yaml"
+
+# 尝试不更新判别器
+# cfg = "experiments/newganpipeline_batch1_SGD-8e-1-Adam_tex256_f16_testmore_augment_debug_test.yaml"
+
+# 尝试 different light/view dir
+# cfg = "experiments/newganpipeline_batch1_SGD-8e-1-Adam_tex256_f16_alldata_augment_debug_dlv.yaml"
+
+# cfg = "experiments/newganpipeline_batch1_SGD-8e-1-Adam_tex256_f16_oneview_augment.yaml"

@@ -39,8 +39,8 @@ def im_to_numpy(img):
     if type(img) is np.ndarray:
         return img
     img = to_numpy(img)
-    img = np.transpose(img, (1, 2, 0))  # H*W*C
-    return img
+    res_img = np.transpose(img, (1, 2, 0))  # H*W*C
+    return res_img
 
 
 def resize(img, owidth, oheight):
@@ -161,7 +161,7 @@ def imshow(img, tone_mapping=True):
     fig=plt.figure()
     tmp = img
     if tone_mapping:
-        tmp = CEToneMapping(tmp, 0.2)
+        tmp = CEToneMapping(tmp, 3)
     npimg = im_to_numpy(tmp * 255).astype(np.uint8)
     plt.imshow(npimg)
     plt.axis('off')
@@ -174,7 +174,7 @@ def show_img_list(img_list, size, rol_col, tone_mapping=True, title_list = None)
     for i in range(1, num+1):
         tmp = img_list[i-1]
         if tone_mapping:
-            tmp = CEToneMapping(tmp, 0.2)
+            tmp = CEToneMapping(tmp, 3)
         npimg = im_to_numpy(tmp * 255).astype(np.uint8)
         fig.add_subplot(rol_col[0], rol_col[1], i)
         if title_list:
@@ -192,10 +192,13 @@ def imwrite(filename, img, tone_mapping=True):
     - img: tensor C × H × W, range [0, 1], or ndarray H × W × C
     """
     if tone_mapping:
-        tone_img = CEToneMapping(img, 0.2)
+        tone_img = CEToneMapping(img, 3)
     else:
         tone_img = img
     npimg = im_to_numpy(tone_img * 255).astype(np.uint8)
+    
+    npimg = cv2.cvtColor(npimg, cv2.COLOR_BGR2RGB)
+
     cv2.imwrite(filename, npimg)
 
 
