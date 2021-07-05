@@ -12,7 +12,7 @@ import torch.nn.functional as F
 import argparse
 
 from core.models.pipeline import NewGanPipelineModel
-from core.models.discriminator import Discriminator, Discriminator2
+from core.models.discriminator import Discriminator
 from core.models.vggnet import VGG19
 from core.datasets.base_dataset import BaseDataset
 

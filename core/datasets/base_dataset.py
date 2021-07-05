@@ -111,15 +111,16 @@ class BaseDataset(Dataset):
         if mode == "ALL_DATA":
             for folder in range(configs.DATASET.VIEW_NUM):
                 for p in range(configs.DATASET.LIGHT_NUM):
-                    path = join(self.root, "gt", str(folder), "img{:0>5d}_cam00.exr".format(p))
+                    path1 = join(self.root, "gt", str(folder), "img{:0>5d}_cam00.exr".format(p))
+                    path2 = join(self.cache_root, "gt", str(folder), "img{:0>5d}_cam00.exr".format(p))
 
-                    if self.check_file_exist and not isfile(path):
-                        logger.warning("image {} is not existed!".format(path))
+                    if self.check_file_exist and not isfile(path1) and not isfile(path2):
+                        logger.warning("image {} is not existed!".format(path1))
                         continue
 
-                    self.train_data.append(path)
+                    self.train_data.append(path1)
                     if folder == 10 and p % 8 == 0:
-                        self.valid_data.append(path)
+                        self.valid_data.append(path1)
         else:
             exit()
 
