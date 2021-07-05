@@ -11,7 +11,7 @@ os.chdir('D:\\Code\\Project\\temp\\PathTracer\\PathTracer')   # 修改当前工�
 for folder in range(24):
     ex_path = "D:\\Code\\Project\\NeuralTexture_gan\\data\\fabric\\gt\\{}\\result256\\extrinsic.yml".format(folder)
     in_path = "obj/test/intrinsic1.yml"
-    output_file = "D:\\Code\\Project\\NeuralTexture_gan\\data\\{}\\gt\\{}\\result256\\render_extrinsic.yml.exr".format(OBJECT_NAME, folder)
+    output_file = "D:\\Code\\Project\\NeuralTexture_gan\\data\\{}\\.neural_texture\\gt\\{}\\result256\\render_extrinsic.yml.exr".format(OBJECT_NAME, folder)
 
 
     if not isdir(os.path.dirname(output_file)):

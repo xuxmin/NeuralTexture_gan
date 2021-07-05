@@ -88,18 +88,20 @@ class BaseDataset(Dataset):
 
     def __init__(self, root, is_train=False, check_file_exist=False):
         self.root = root
+        self.cache_root = join(self.root, '.neural_texture')                        # 缓存路径
+
         self.is_train = is_train
         self.train_data = []
         self.valid_data = []
-        self.light_data = load_bin(join(self.root, "lights_8x8.bin"), (2, 384, 3))  # pos, norm
+        self.light_data = load_bin(join(self.cache_root, "lights_8x8.bin"), (2, 384, 3))  # pos, norm
         self.check_file_exist = check_file_exist
 
-        normal_path = join(self.root, "normal_geo_gloabl.pt")
+        normal_path = join(self.cache_root, "normal_geo_gloabl.pt")
 
         if isfile(normal_path):
             self.normal_map = torch.load(normal_path)
         else:
-            self.normal_map = load_image(join(self.root, "normal_geo_gloabl.exr"))
+            self.normal_map = load_image(join(self.cache_root, "normal_geo_gloabl.exr"))
             torch.save(self.normal_map, normal_path)
         
         self._split_dataset(configs.DATASET.MODE)
@@ -159,10 +161,10 @@ class BaseDataset(Dataset):
         """
         folder_idx, image_idx = self._parse_path(path)
 
-        uv_map_path = join(self.root, "gt", str(folder_idx), "result256", "render_extrinsic.yml.exr")
-        mask_path = join(self.root, "stereo", str(folder_idx), "mask_cam00.png")
+        uv_map_path = join(self.cache_root, "gt", str(folder_idx), "result256", "render_extrinsic.yml.exr")
+        mask_path = join(self.cache_root, "stereo", str(folder_idx), "mask_cam00.png")
 
-        uv_map_pt_path = join(self.root, "gt", str(folder_idx), "result256", "render_extrinsic.yml.pt")
+        uv_map_pt_path = join(self.cache_root, "gt", str(folder_idx), "result256", "render_extrinsic.yml.pt")
         if isfile(uv_map_pt_path):
             uv_map = torch.load(uv_map_pt_path)
         else:
@@ -198,9 +200,9 @@ class BaseDataset(Dataset):
         # 为了保证读取速度, 会将 gt 转成 .pt 文件。由于把完整大小的 exr 转成 .pt 文件太慢了
         # 所有将裁剪并缩放后的文件进行存储。
         if configs.MODEL.IMAGE_SIZE[0] == 256:      # 为了兼容以前的代码
-            tmp = path.replace('.exr', '.pt')
+            tmp = path.replace(self.root, self.cache_root).replace('.exr', '.pt')
         else:
-            tmp = path.replace('.exr', '_{}.pt'.format(configs.MODEL.IMAGE_SIZE[0]))
+            tmp = path.replace(self.root, self.cache_root).replace('.exr', '_{}.pt'.format(configs.MODEL.IMAGE_SIZE[0]))
 
         if isfile(tmp):
             gt = torch.load(tmp)

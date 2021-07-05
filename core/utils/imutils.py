@@ -65,8 +65,6 @@ def augment(img_list, output_size):
     top = random.randint(0, output_size - crop_size)
     left = random.randint(0, output_size - crop_size)  
 
-    rot_angle = random.randint(-20, 20)
-
     scale_factor = random.randint(70, 110) / 100
     scale_size = int(crop_size * scale_factor)
     scale_size = scale_size if scale_size % 2 == 0 else scale_size + 1
