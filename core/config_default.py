@@ -9,12 +9,36 @@ configs = {
         'HIERARCHY': False,                         
     },
 
+    'OBJECT_NAME': None,        # 模型 obj 文件名, PathTracer_NEWCAM, PathTracer 中都要存
+
     'DATASET': {
         'NAME': 'egg',
         'ROOT': 'D:\\Code\\Porject\\NeuralTexture-master\\data',
+        'VIEW_NUM': 24,
+        'LIGHT_NUM': 384,
         'MODE': 'TEST_ALL',
         'AUGMENT': False,
         'DLV': False,
+        
+        'UV_MAP_X': 0,          # UV_MAP 裁剪
+        'UV_MAP_Y': 0,
+        'UV_MAP_W': 0,
+        'UV_MAP_H': 0,
+        
+        'MASK_X': 0,            # MASK 裁剪
+        'MASK_Y': 0,
+        'MASK_W': 0,
+        'MASK_H': 0,
+
+        'GT_X': 0,              # GT 裁剪
+        'GT_Y': 0,
+        'GT_W': 0,
+        'GT_H': 0,
+
+        'UV_MAP_X2': 0,         # 用于生成视频的 UV_MAP 裁剪 
+        'UV_MAP_Y2': 0,
+        'UV_MAP_H2': 0,
+        'UV_MAP_W2': 0,
     },
 
     'MODEL': {

@@ -3,7 +3,6 @@ import torch
 import cv2
 import numpy as np
 import math
-from torch.functional import norm
 from torch.utils.data import Dataset
 import os
 
@@ -35,10 +34,10 @@ def get_uv_map(camera_pos):
     z = camera_pos[2]
 
     file_name = "render-{}-{}-{}".format(x, y, z)
-    file_path = "res\\bottle_bak\\{}.exr".format(file_name)
+    file_path = "res\\diaper\\{}.exr".format(file_name)
 
     if not isfile(file_path):
-        os.system('.\\PathTracer_NEWCAM_UV.exe obj\\test\\bottle_bak_crop.obj uv {} {} {} {}'.format(x, y, z, file_path))
+        os.system('.\\PathTracer_NEWCAM_UV.exe obj\\test\\diaper.obj uv {} {} {} {}'.format(x, y, z, file_path))
 
     img = load_image(file_path)
 
@@ -59,10 +58,10 @@ def get_uv_map_rot(camera_pos, rotation):
     z = camera_pos[2]
 
     file_name = "render-{}-{}-{}-{}".format(x, y, z, rotation)
-    file_path = "res\\bottle_bak\\{}.exr".format(file_name)
+    file_path = "res\\diaper\\{}.exr".format(file_name)
 
     if not isfile(file_path):
-        os.system('.\\PathTracer_ROT_TMP.exe obj\\test\\bottle_bak_crop.obj uv {} {} {} {} {}'.format(x, y, z, file_path, rotation))
+        os.system('.\\PathTracer_ROT_TMP.exe obj\\test\\diaper.obj uv {} {} {} {} {}'.format(x, y, z, file_path, rotation))
 
     img = load_image(file_path)
 
@@ -74,14 +73,15 @@ def get_uv_map_rot(camera_pos, rotation):
     return img
 
 
-class BottleDataset(Dataset):
+class DiaperDataset(Dataset):
 
-    def __init__(self, root, is_train=False):
+    def __init__(self, root, is_train=False, check_file_exist=False):
         self.root = root
         self.is_train = is_train
         self.train_data = []
         self.valid_data = []
         self.light_data = load_bin(join(self.root, "lights_8x8.bin"), (2, 384, 3))  # pos, norm
+        self.check_file_exist = check_file_exist
 
         normal_path = join(self.root, "normal_geo_gloabl.pt")
 
@@ -100,7 +100,7 @@ class BottleDataset(Dataset):
                 for p in range(configs.DATASET.LIGHT_NUM):
                     path = join(self.root, "gt", str(folder), "img{:0>5d}_cam00.exr".format(p))
 
-                    if not isfile(path):
+                    if self.check_file_exist and not isfile(path):
                         logger.warning("image {} is not existed!".format(path))
                         continue
 
@@ -148,10 +148,10 @@ class BottleDataset(Dataset):
         """
         folder_idx, image_idx = self._parse_path(path)
 
-        uv_map_path = join(self.root, "gt", str(folder_idx), "result256", "crop_render_extrinsic.yml.exr")
-        mask_path = join(self.root, "gt", str(folder_idx), "mask_cam00.png")
+        uv_map_path = join(self.root, "gt", str(folder_idx), "result256", "render_extrinsic.yml.exr")
+        mask_path = join(self.root, "stereo", str(folder_idx), "mask_cam00.png")
 
-        uv_map_pt_path = join(self.root, "gt", str(folder_idx), "result256", "crop_render_extrinsic.yml.pt")
+        uv_map_pt_path = join(self.root, "gt", str(folder_idx), "result256", "render_extrinsic.yml.pt")
         if isfile(uv_map_pt_path):
             uv_map = torch.load(uv_map_pt_path)
         else:
@@ -162,7 +162,7 @@ class BottleDataset(Dataset):
         # -------------
         # 需要合适的裁剪方法
         # -------------
-        uv_map = uv_map[:, 300:900, 350:950]
+        uv_map = uv_map[:, 0:1125, 125:1275]
 
         # load mask
         mask_path_tmp = mask_path.replace('.png', '.pt')
@@ -174,7 +174,7 @@ class BottleDataset(Dataset):
         # -----------
         # 需要合适的裁剪方法与 uv_map 对上
         # -----------
-        mask = mask[:, 900:3600, 1400:3800]
+        mask = mask[:, 0:4600, 500:5100]
 
         # load gt
         tmp = path.replace('.exr', '.pt')
@@ -182,7 +182,7 @@ class BottleDataset(Dataset):
             gt = torch.load(tmp)
         else:
             gt = load_image(path)
-            gt = gt[:, 900:3600, 1400:3800]
+            gt = gt[:, 0:4600, 500:5100]
             gt = resize(gt, 350, 350)
             torch.save(gt, tmp)
 

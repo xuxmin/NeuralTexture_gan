@@ -1,0 +1,28 @@
+PRINT_FREQ: 5
+TRAIN:
+  D_LR: 0.0001
+  G_LR: 0.0005  
+  END_EPOCH: 15
+  BATCH_SIZE: 1
+  LR_STEP: [3]
+  LR_FACTOR: 0.2
+  PROCESS: False
+  LAMBDA_GAN: 1
+  LAMBDA_L1: 10
+  LAMBDA_FM: 10
+  LAMBDA_VGG: 10
+NEURAL_TEXTURE:
+  FEATURE_NUM: 16
+  HIERARCHY: False
+MODEL:
+  NAME: newganpipeline
+  IMAGE_SIZE: [256, 256]
+DATASET:
+  NAME: fabric
+  VIEW_NUM: 24
+  LIGHT_NUM: 384
+  MODE: ALL_DATA
+  ROOT: D:\Code\Project\NeuralTexture_gan\data\fabric
+  AUGMENT: True
+DEBUG:
+  CHECK_PER_EPOCH: 150

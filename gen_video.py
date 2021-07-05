@@ -1,3 +1,4 @@
+from pickle import NONE
 import cv2
 import math
 import matplotlib.pyplot as plt
@@ -6,10 +7,14 @@ import imageio
 import numpy as np
 from core.config import configs, update_config
 from core.datasets.egg import EggDataset
+from core.datasets.base_dataset import BaseDataset
+from core.datasets.bottle import BottleDataset
 from core.utils.imutils import imshow
+from core.utils.imutils import resize
 from core.utils.imutils import show_img_list
 from core.utils.imutils import im_to_numpy
 from core.utils.imutils import CEToneMapping
+from core.utils.imutils import ACESToneMapping
 from core.models.pipeline import PipelineModel
 from core.models.pipeline import NewGanPipelineModel
 from core.models.lp_generator import LPGenerator
@@ -95,10 +100,10 @@ def gen_video(name, model1, model2):
     - 尺寸不能是任意的, 可以用 (640, 480)
     - 图像的格式也有规定, 看下面吧
     """
-    eggDataset_valid = EggDataset(configs.DATASET.ROOT, is_train=False)
+    eggDataset_valid = BottleDataset(configs.DATASET.ROOT, is_train=True)
 
     configs.DATASET.DLV = False
-    uv_map, gt, mask, normal, light_pos1, view_dir1 = eggDataset_valid.getData(7, 282)
+    uv_map, gt, mask, normal, light_pos1, view_dir1 = eggDataset_valid[100]
 
     fps = 24.0            # 视频帧率
     size = (640, 480)   
@@ -124,22 +129,35 @@ def gen_video(name, model1, model2):
 
         print ("{} light_dir: {} view_dir: {}".format(i, light_dir, view_dir1))
 
+        IMAGE_SIZE = 256
+        TONE_MAPPING = 20
+
         configs.DATASET.DLV = False
         output1 = valid_model(model1, uv_map, normal, view_dir1, light_dir).detach().cpu()
         image1 = torch.exp(output1 * 3) - math.exp(-3)          # image [0, ∞]
-        tone_img1 = CEToneMapping(image1, 3)
+        # tone_img1 = CEToneMapping(image1, TONE_MAPPING)
+        tone_img1 = ACESToneMapping(image1, TONE_MAPPING)
+        tone_img1 = torch.clamp(tone_img1, 0, 1)
+        tone_img1 = resize(tone_img1, IMAGE_SIZE, IMAGE_SIZE)
         npimg1 = im_to_numpy(tone_img1*255).astype(np.uint8)[:, :, [2, 1, 0]]
 
-        output2 = valid_model(model2, uv_map, normal, view_dir1, light_dir).detach().cpu()
-        image2 = torch.exp(output2 * 3) - math.exp(-3)       # image [0, ∞]
-        tone_img2 = CEToneMapping(image2, 3) * mask
-        npimg2 = im_to_numpy(tone_img2*255).astype(np.uint8)[:, :, [2, 1, 0]]
+        
+        if model2 is not None:
+            output2 = valid_model(model2, uv_map, normal, view_dir1, light_dir).detach().cpu()
+            image2 = torch.exp(output2 * 3) - math.exp(-3)       # image [0, ∞]
+            tone_img2 = CEToneMapping(image2, TONE_MAPPING) * mask
+            tone_img2 = resize(tone_img2, IMAGE_SIZE, IMAGE_SIZE)
+            npimg2 = im_to_numpy(tone_img2*255).astype(np.uint8)[:, :, [2, 1, 0]]
 
-        image = np.concatenate((npimg1, npimg2), axis=1) 
-        # image = npimg1
+            image = np.concatenate((npimg1, npimg2), axis=1)
+            pad_w = (size[0] - IMAGE_SIZE*2) // 2
+            pad_h = (size[1] - IMAGE_SIZE) // 2
 
-        pad_w = (size[0] - 256*2) // 2
-        pad_h = (size[1] - 256) // 2
+        else:
+            image = npimg1
+            pad_w = (size[0] - IMAGE_SIZE) // 2
+            pad_h = (size[1] - IMAGE_SIZE) // 2
+
         pad_img = cv2.copyMakeBorder(image, pad_h, pad_h, pad_w, pad_w, cv2.BORDER_CONSTANT, value=(0, 0, 0))
 
         cv2.imwrite("output/temp/{}.png".format(i), pad_img)
@@ -151,19 +169,20 @@ def gen_video(name, model1, model2):
     cv2.destroyAllWindows()
 
 
-configs.DATASET.ROOT = "D:\\Code\\Project\\NeuralTexture_gan\\data"
-configs.DATASET.MODE = "ALL_DATA_7/8"
+configs.DATASET.ROOT = "D:\\Code\\Project\\NeuralTexture_gan\\data\\bottle_bak"
+configs.DATASET.MODE = "ALL_DATA"
 configs.TRAIN.PROCESS = False
 
 # alldata 7/8
-checkpoint_nofm =  "D:\\Code\\Project\\NeuralTexture_gan\\log\\egg\\newganpipeline_final\\newganpipeline_tex256_f16_alldata_loss1-1-0-0"
-checkpoint_l1 =  "D:\\Code\\Project\\NeuralTexture_gan\\log\\egg\\newganpipeline_final\\newganpipeline_tex256_f16_alldata_loss0-1-0-0"
+# checkpoint =  "D:\\Code\\Project\\NeuralTexture_gan\\log\\fabric\\newganpipeline\\newganpipeline_tex256_f16_alldata_loss1-10-10-10"
+checkpoint =  "D:\\Code\\Project\\NeuralTexture_gan\\log\\bottle_bak\\newganpipeline\\newganpipeline_tex256_f16_alldata_loss1-10-10-10_augment"
+# checkpoint_l1 =  "D:\\Code\\Project\\NeuralTexture_gan\\log\\egg\\newganpipeline_final\\newganpipeline_tex256_f16_alldata_loss0-1-0-0"
 
 
-model1 = get_model(checkpoint_nofm, 'checkpoint.pth.tar')
-model2 = get_model(checkpoint_l1, 'checkpoint.pth.tar')
+model1 = get_model(checkpoint, 'checkpoint.pth.tar')
+# model2 = get_model(checkpoint_l1, 'checkpoint.pth.tar')
 
 
-gen_video("output/test.avi", model1, model2)
+gen_video("output/test_bottle_bak.avi", model1, None)
 
 

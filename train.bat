@@ -1,0 +1,1 @@
+python train_gan_new.py --cfg experiments/fabric_wave/newganpipeline_tex256_img512_f16_alldata_loss1-10-10-10_augment.yaml

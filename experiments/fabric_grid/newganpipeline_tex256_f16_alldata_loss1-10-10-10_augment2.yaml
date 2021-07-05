@@ -1,0 +1,55 @@
+PRINT_FREQ: 5
+
+OBJECT_NAME: fabric_grid.obj
+
+TRAIN:
+  D_LR: 0.0001
+  G_LR: 0.0005  
+  END_EPOCH: 15
+  BATCH_SIZE: 1
+  LR_STEP: [3]
+  LR_FACTOR: 0.2
+  PROCESS: False
+  LAMBDA_GAN: 1
+  LAMBDA_L1: 10
+  LAMBDA_FM: 10
+  LAMBDA_VGG: 10
+
+NEURAL_TEXTURE:
+  FEATURE_NUM: 16
+  HIERARCHY: False
+
+MODEL:
+  NAME: newganpipeline
+  IMAGE_SIZE: [256, 256]
+
+DATASET:
+  NAME: fabric_grid
+  VIEW_NUM: 24
+  LIGHT_NUM: 384
+  MODE: ALL_DATA
+  ROOT: D:\Code\Project\NeuralTexture_gan\data\fabric_grid
+  AUGMENT: True
+
+  UV_MAP_X: 300
+  UV_MAP_Y: 300
+  UV_MAP_W: 800
+  UV_MAP_H: 800
+
+  MASK_X: 1200
+  MASK_Y: 1200
+  MASK_W: 3200
+  MASK_H: 3200
+
+  GT_X: 1200
+  GT_Y: 1200
+  GT_W: 3200
+  GT_H: 3200
+
+  UV_MAP_X2: 300
+  UV_MAP_Y2: 300
+  UV_MAP_W2: 800
+  UV_MAP_H2: 800
+
+DEBUG:
+  CHECK_PER_EPOCH: 150

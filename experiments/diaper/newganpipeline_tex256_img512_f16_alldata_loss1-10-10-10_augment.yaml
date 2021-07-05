@@ -1,0 +1,55 @@
+PRINT_FREQ: 5
+
+OBJECT_NAME: diaper.obj
+
+TRAIN:
+  D_LR: 0.0001
+  G_LR: 0.0001  
+  END_EPOCH: 40
+  BATCH_SIZE: 1
+  LR_STEP: [300]
+  LR_FACTOR: 0.2
+  PROCESS: False
+  LAMBDA_GAN: 1
+  LAMBDA_L1: 10
+  LAMBDA_FM: 10
+  LAMBDA_VGG: 10
+
+NEURAL_TEXTURE:
+  FEATURE_NUM: 16
+  HIERARCHY: False
+
+MODEL:
+  NAME: newganpipeline
+  IMAGE_SIZE: [512, 512]
+
+DATASET:
+  NAME: diaper
+  VIEW_NUM: 24
+  LIGHT_NUM: 384
+  MODE: ALL_DATA
+  ROOT: D:\Code\Project\NeuralTexture_gan\data\diaper
+  AUGMENT: True
+
+  UV_MAP_X: 0
+  UV_MAP_Y: 125
+  UV_MAP_W: 1125
+  UV_MAP_H: 1250
+
+  MASK_X: 0
+  MASK_Y: 500
+  MASK_W: 4600
+  MASK_H: 4600
+
+  GT_X: 0
+  GT_Y: 500
+  GT_W: 4600
+  GT_H: 4600
+
+  UV_MAP_X2: 0
+  UV_MAP_Y2: 0
+  UV_MAP_W2: 1150
+  UV_MAP_H2: 1300
+
+DEBUG:
+  CHECK_PER_EPOCH: 150
