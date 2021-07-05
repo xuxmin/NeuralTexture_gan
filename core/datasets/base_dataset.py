@@ -112,7 +112,7 @@ class BaseDataset(Dataset):
             for folder in range(configs.DATASET.VIEW_NUM):
                 for p in range(configs.DATASET.LIGHT_NUM):
                     path1 = join(self.root, "gt", str(folder), "img{:0>5d}_cam00.exr".format(p))
-                    path2 = join(self.cache_root, "gt", str(folder), "img{:0>5d}_cam00.exr".format(p))
+                    path2 = join(self.cache_root, "gt", str(folder), "img{:0>5d}_cam00.exr".format(p)).replace('.exr', '_{}.pt'.format(configs.MODEL.IMAGE_SIZE[0]))
 
                     if self.check_file_exist and not isfile(path1) and not isfile(path2):
                         logger.warning("image {} is not existed!".format(path1))
