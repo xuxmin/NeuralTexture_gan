@@ -206,7 +206,11 @@ class BaseDataset(Dataset):
             tmp = path.replace(self.root, self.cache_root).replace('.exr', '_{}.pt'.format(configs.MODEL.IMAGE_SIZE[0]))
 
         if isfile(tmp):
-            gt = torch.load(tmp)
+            try:
+                gt = torch.load(tmp)
+            except:
+                print("Error {}".format(tmp))
+                exit()
         else:
             gt = load_image(path)
             # gt = gt[:, 1000:4400, 1000:4400]

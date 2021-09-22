@@ -75,14 +75,25 @@ def save_tensor_image(image, name):
     imageio.imwrite(name, npimg)
 
 
+def init_seeds(seed=0):
+    torch.manual_seed(seed) # sets the seed for generating random numbers.
+    torch.cuda.manual_seed(seed) # Sets the seed for generating random numbers for the current GPU. It’s safe to call this function if CUDA is not available; in that case, it is silently ignored.
+    torch.cuda.manual_seed_all(seed) # Sets the seed for generating random numbers on all GPUs. It’s safe to call this function if CUDA is not available; in that case, it is silently ignored.
+
+    if seed == 0:
+        torch.backends.cudnn.deterministic = True
+        torch.backends.cudnn.benchmark = False
+
+
 def main():
     args = parse_args()
     logger, final_output_dir, tb_log_dir, checkpoint_dir = create_logger(args.cfg, 'train')
 
     # cudnn setting
-    torch.backends.cudnn.benchmark = True
-    torch.backends.cudnn.deterministic = False
-    torch.backends.cudnn.enabled = True
+    # torch.backends.cudnn.benchmark = True
+    # torch.backends.cudnn.deterministic = False
+    # torch.backends.cudnn.enabled = True
+    init_seeds(0)
 
     # choose device
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")

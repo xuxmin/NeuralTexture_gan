@@ -61,11 +61,11 @@ def augment(img_list, output_size):
     img_list: 要同时处理的图片
     """
 
-    crop_size = random.randint(output_size // 10 * 6, output_size // 10 * 9) 
+    crop_size = random.randint(output_size // 10 * 9, output_size // 10 * 10) 
     top = random.randint(0, output_size - crop_size)
     left = random.randint(0, output_size - crop_size)  
 
-    scale_factor = random.randint(70, 110) / 100
+    scale_factor = random.randint(70, 100) / 100
     scale_size = int(crop_size * scale_factor)
     scale_size = scale_size if scale_size % 2 == 0 else scale_size + 1
 

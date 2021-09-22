@@ -5,7 +5,7 @@ OBJECT_NAME: diaper.obj
 TRAIN:
   D_LR: 0.0001
   G_LR: 0.0001  
-  END_EPOCH: 40
+  END_EPOCH: 25
   BATCH_SIZE: 1
   LR_STEP: [300]
   LR_FACTOR: 0.2
@@ -28,13 +28,13 @@ DATASET:
   VIEW_NUM: 24
   LIGHT_NUM: 384
   MODE: ALL_DATA
-  ROOT: D:\Code\Project\NeuralTexture_gan\data\diaper
+  ROOT: /home/xxm/Porject/NeuralTexture_gan/data/diaper
   AUGMENT: True
 
   UV_MAP_X: 0
   UV_MAP_Y: 125
-  UV_MAP_W: 1125
-  UV_MAP_H: 1250
+  UV_MAP_W: 1150
+  UV_MAP_H: 1150
 
   MASK_X: 0
   MASK_Y: 500
