@@ -6,6 +6,8 @@ This project use GAN and Neural Texture to synthesis the image on new view and l
 
 ## Pipeline
 
+Training data: the object under 32 view directions and 384 lighting directions, a total of 12288 photos.
+
 ![image](./docs/imgs/pipeline.png)
 
 ## Results
