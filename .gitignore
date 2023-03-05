@@ -6,7 +6,6 @@ test/
 *.pth
 *.pth.tar
 *.vscode
-*.png
 *.jpg
 *.json
 *.idea/*
