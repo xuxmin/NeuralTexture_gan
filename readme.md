@@ -1,7 +1,8 @@
 
 # Relighting using Neural Texture and GAN
 
-This project use GAN to train and relight the object.
+This project use GAN and Neural Texture to synthesis the image on new view and light condition.
+
 
 ## Pipeline
 
